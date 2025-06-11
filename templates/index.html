@@ -1101,7 +1101,10 @@
           <button onclick="addTextBox()" class="btn-secondary">
             <i class="fas fa-font"></i> Add Text
           </button>
-          <button onclick="exportCanvasAsPDF()" class="btn-success">
+          <button onclick="savePDF()" class="btn-success">
+            <i class="fas fa-file-pdf"></i> Save canvas
+          </button>
+          <button onclick="exportCanvasAsPDF()" class="btn-success" id="exportButton">
             <i class="fas fa-file-pdf"></i> Export PDF
           </button>
         </div>
@@ -1837,9 +1840,13 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(savedElements));
       loadCanvasElements();
     }
-
+    async function savePDF() {
+      location.reload();
+      
+    }
     // Export as PDF
     async function exportCanvasAsPDF() {
+      
   const dropZone = document.getElementById("dropZone");
   
   // Hide elements that should not appear in the PDF
@@ -1866,6 +1873,7 @@
     });
 
     const imgData = canvas.toDataURL("image/png");
+    
 
     // Create PDF with A4 size in points (595.28 x 841.89)
     const pdf = new jspdf.jsPDF({
