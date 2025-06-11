@@ -13,6 +13,21 @@
       } else {
         console.log('Chart.js loaded successfully:', Chart.version);
       }
+
+      // Update the database dropdown to show the currently selected database
+      const selectedDbStr = localStorage.getItem('selectedDatabase');
+      if (selectedDbStr) {
+        try {
+          const selectedDb = JSON.parse(selectedDbStr);
+          const selectDbBtn = document.getElementById('selectDbBtn');
+          if (selectDbBtn) {
+            selectDbBtn.innerHTML = `<i class="fas fa-database"></i> Database: <span class="selected-db">${selectedDb.database} (${selectedDb.dbType})</span>`;
+          }
+          window.selectedDatabaseConnection = selectedDb;
+        } catch (e) {
+          console.error('Error parsing selectedDatabase from localStorage:', e);
+        }
+      }
     });
   </script>
   <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
@@ -1827,7 +1842,7 @@
     async function exportCanvasAsPDF() {
   const dropZone = document.getElementById("dropZone");
   
-  // Hide elements
+  // Hide elements that should not appear in the PDF
   const deleteButtons = dropZone.querySelectorAll(".delete-btn");
   const fontSelectors = dropZone.querySelectorAll("select");
   deleteButtons.forEach(btn => btn.style.display = "none");
@@ -1839,20 +1854,35 @@
   console.log("Exporting with dimensions:", width, height);
 
   try {
+    // Use a higher scale for better resolution
     const canvas = await html2canvas(dropZone, { 
-      scale: 2,
+      scale: 3,
       useCORS: true,
-      logging: true // Enable for debugging
+      logging: true,
+      scrollX: -window.scrollX,
+      scrollY: -window.scrollY,
+      windowWidth: document.documentElement.offsetWidth,
+      windowHeight: document.documentElement.offsetHeight
     });
 
     const imgData = canvas.toDataURL("image/png");
-    const pdf = new jspdf.jsPDF("p", "pt", [width, height]);
-    pdf.addImage(imgData, "PNG", 0, 0, width, height);
+
+    // Create PDF with A4 size in points (595.28 x 841.89)
+    const pdf = new jspdf.jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: [width, height]
+    });
+
+    // Add image to PDF with proper dimensions
+    pdf.addImage(imgData, "PNG", 0, 0, width, height, undefined, 'FAST');
+
+    // Save the PDF
     pdf.save("dashboard_canvas.pdf");
   } catch (error) {
     console.error("Export failed:", error);
   } finally {
-    // Restore UI
+    // Restore UI elements
     deleteButtons.forEach(btn => btn.style.display = "block");
     fontSelectors.forEach(sel => sel.style.display = "inline-block");
   }
@@ -2160,14 +2190,14 @@
         console.log('Loading databases with connection:', connectionDetails);
         
         // Use the full URL with port number for more reliable connection
-        const apiBaseUrl = 'http://localhost:3000/api';
-        
-        // Use the connection details to fetch databases
-        const response = await fetch(`${apiBaseUrl}/databases`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(connectionDetails)
-        });
+          const apiBaseUrl = 'http://127.0.0.1:8000/api';
+          
+          // Use the connection details to fetch databases
+          const response = await fetch(`${apiBaseUrl}/databases`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(connectionDetails)
+          });
         
         if (!response.ok) {
           throw new Error(`Server responded with status ${response.status}`);
@@ -2192,17 +2222,17 @@
         databaseList.appendChild(divider);
         
         // Add each database to the list
-        if (data.success && data.databases && data.databases.length > 0) {
-          data.databases.forEach(db => {
-            const dbItem = document.createElement('div');
-            dbItem.className = 'db-item';
-            if (db.name === selectedDbName) {
-              dbItem.className += ' selected';
-            }
-            dbItem.innerHTML = `<i class="fas fa-database"></i> ${db.name}`;
-            dbItem.onclick = () => selectDatabase(db.name);
-            databaseList.appendChild(dbItem);
-          });
+          if (data.success && data.databases && data.databases.length > 0) {
+            data.databases.forEach(dbName => {
+              const dbItem = document.createElement('div');
+              dbItem.className = 'db-item';
+              if (dbName === selectedDbName) {
+                dbItem.className += ' selected';
+              }
+              dbItem.innerHTML = `<i class="fas fa-database"></i> ${dbName}`;
+              dbItem.onclick = () => selectDatabase(dbName);
+              databaseList.appendChild(dbItem);
+            });
           
           // Update the selected database in the UI
           const selectDbBtn = document.getElementById('selectDbBtn');
@@ -2851,7 +2881,7 @@
           databaseListContainer.innerHTML = '';
           databaseListContainer.appendChild(changeConnItem);
 
-          const response = await fetch('http://localhost:3000/api/databases', {
+          const response = await fetch('http://127.0.0.1:8000/api/databases', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(currentConnection)

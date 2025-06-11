@@ -1018,7 +1018,7 @@
             showStatus('Testing connection...', 'loading');
 
             try {
-                const response = await fetch('http://localhost:3000/api/test-connection', {
+                const response = await fetch('/api/test-connection', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1066,7 +1066,7 @@
 
             showStatus('Saving connection...', 'loading');
             
-            const apiBaseUrl = 'http://localhost:3000/api';
+            const apiBaseUrl = 'http://127.0.0.1:8000/api';
 
             try {
                 // First test the connection to make sure it works
@@ -1089,13 +1089,13 @@
                 }
 
                 // Connection test successful, now save the connection
-                const saveResponse = await fetch(`${apiBaseUrl}/create-connection`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(connectionDetails)
-                });
+            const saveResponse = await fetch(`${apiBaseUrl}/create-connection`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(connectionDetails)
+            });
 
                 if (!saveResponse.ok) {
                     throw new Error(`Server responded with status ${saveResponse.status}`);
@@ -1111,13 +1111,13 @@
                 localStorage.setItem('currentConnection', JSON.stringify(connectionDetails));
 
                 // Now fetch the databases for this connection
-                const dbResponse = await fetch(`${apiBaseUrl}/databases`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(connectionDetails)
-                });
+            const dbResponse = await fetch(`${apiBaseUrl}/databases`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(connectionDetails)
+            });
 
                 if (!dbResponse.ok) {
                     throw new Error(`Server responded with status ${dbResponse.status}`);
@@ -1195,7 +1195,7 @@
 
             showStatus('Refreshing databases...', 'loading');
 
-            fetch('http://localhost:3000/api/databases', {
+            fetch('/api/databases', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1224,14 +1224,14 @@
 
         function displayDatabases(databases) {
             databaseList.innerHTML = '';
-            databases.forEach(db => {
+            databases.forEach(dbName => {
                 const dbItem = document.createElement('div');
                 dbItem.className = 'database-item';
                 dbItem.innerHTML = `
-                    <div class="name">${db.name}</div>
-                    <div class="size">${db.sizeOnDisk ? formatSize(db.sizeOnDisk) : ''}</div>
+                    <div class="name">${dbName}</div>
+                    <div class="size"></div>
                 `;
-                dbItem.addEventListener('click', () => selectDatabase(db.name));
+                dbItem.addEventListener('click', () => selectDatabase(dbName));
                 databaseList.appendChild(dbItem);
             });
         }
@@ -1314,7 +1314,7 @@
 
             showStatus(`Fetching tables for ${dbName}...`, 'loading');
 
-            fetch('http://localhost:3000/api/tables', {
+            fetch('/api/tables', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1369,11 +1369,11 @@
             
             tableList.innerHTML = '';
             
-            tables.forEach(table => {
+            tables.forEach(tableName => {
                 const tableItem = document.createElement('div');
                 tableItem.className = 'table-item';
                 tableItem.innerHTML = `
-                    <span class="table-name">${table.name}</span>
+                    <span class="table-name">${tableName}</span>
                     <div class="table-actions">
                         <button class="btn-view-data" title="View Data">
                             <i class="fas fa-table"></i>
@@ -1387,18 +1387,18 @@
                 // Add event listener to view table data
                 tableItem.querySelector('.btn-view-data').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    viewTableData(table.name);
+                    viewTableData(tableName);
                 });
                 
                 // Add event listener to view table structure
                 tableItem.querySelector('.btn-structure').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    viewTableStructure(table.name);
+                    viewTableStructure(tableName);
                 });
                 
                 // Add event listener to view table data when clicking on the table name
                 tableItem.querySelector('.table-name').addEventListener('click', () => {
-                    viewTableData(table.name);
+                    viewTableData(tableName);
                 });
                 
                 tableList.appendChild(tableItem);
@@ -1453,7 +1453,7 @@
             console.log('Database:', currentDatabase);
             console.log('Table:', currentTable);
 
-            fetch('http://localhost:3000/api/table-data', {
+            fetch('/api/table-data', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

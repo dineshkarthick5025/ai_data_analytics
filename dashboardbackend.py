@@ -32,6 +32,26 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+from fastapi import APIRouter, Body
+from fastapi.responses import JSONResponse
+from database import (
+    test_postgresql_connection,
+    test_mysql_connection,
+    test_mongodb_connection,
+    list_postgresql_databases,
+    list_mysql_databases,
+    list_mongodb_databases,
+    list_postgresql_tables,
+    list_mysql_tables,
+    list_mongodb_collections,
+    fetch_postgresql_table_data,
+    fetch_mysql_table_data,
+    fetch_mongodb_collection_data,
+    delete_postgresql_database,
+    delete_mysql_database,
+    delete_mongodb_database
+)
+
 templates = Jinja2Templates(directory="templates")
 
 # Security config
@@ -762,6 +782,178 @@ async def transcribe_audio(file: UploadFile = File(...)):
 
 @app.get("/databases")
 async def get_databases():
-    # Since SQLite is file-based, listing databases is not applicable
-    # Return a placeholder or empty list
-    return {"success": True, "databases": []}
+    # This endpoint will list databases based on query parameters
+    db_type = None
+    host = None
+    port = None
+    username = None
+    password = None
+    auth_source = "admin"
+
+    # Extract query parameters
+    from fastapi import Request
+    async def inner(request: Request):
+        nonlocal db_type, host, port, username, password, auth_source
+        params = request.query_params
+        db_type = params.get("dbType")
+        host = params.get("host")
+        port = params.get("port")
+        username = params.get("username")
+        password = params.get("password")
+        auth_source = params.get("authSource", "admin")
+
+        if not db_type or not host or not port:
+            return JSONResponse(status_code=400, content={"success": False, "message": "dbType, host, and port are required"})
+
+        try:
+            if db_type == "postgresql":
+                databases = list_postgresql_databases(host, port, username, password)
+            elif db_type == "mysql":
+                databases = list_mysql_databases(host, port, username, password)
+            elif db_type == "mongodb":
+                databases = list_mongodb_databases(host, port, username, password, auth_source)
+            else:
+                return JSONResponse(status_code=400, content={"success": False, "message": "Unsupported database type"})
+            return {"success": True, "databases": databases}
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+    return await inner(Request)
+
+@app.post("/api/test-connection")
+async def test_connection(payload: dict = Body(...)):
+    db_type = payload.get("dbType")
+    host = payload.get("host")
+    port = payload.get("port")
+    username = payload.get("username")
+    password = payload.get("password")
+    database = payload.get("database")
+    auth_source = payload.get("authSource", "admin")
+
+    if not db_type or not host or not port:
+        return JSONResponse(status_code=400, content={"success": False, "message": "dbType, host, and port are required"})
+
+    try:
+        if db_type == "postgresql":
+            result = test_postgresql_connection(host, port, username, password, database)
+        elif db_type == "mysql":
+            result = test_mysql_connection(host, port, username, password, database)
+        elif db_type == "mongodb":
+            result = test_mongodb_connection(host, port, username, password, database, auth_source)
+        else:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Unsupported database type"})
+        return {"success": True, "message": f"{db_type} connection successful"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+@app.post("/api/databases")
+async def get_databases_post(payload: dict = Body(...)):
+    db_type = payload.get("dbType")
+    host = payload.get("host")
+    port = payload.get("port")
+    username = payload.get("username")
+    password = payload.get("password")
+    auth_source = payload.get("authSource", "admin")
+
+    if not db_type or not host or not port:
+        return JSONResponse(status_code=400, content={"success": False, "message": "dbType, host, and port are required"})
+
+    try:
+        if db_type == "postgresql":
+            databases = list_postgresql_databases(host, port, username, password)
+        elif db_type == "mysql":
+            databases = list_mysql_databases(host, port, username, password)
+        elif db_type == "mongodb":
+            databases = list_mongodb_databases(host, port, username, password, auth_source)
+        else:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Unsupported database type"})
+        return {"success": True, "databases": databases}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+@app.post("/api/tables")
+async def get_tables_post(payload: dict = Body(...)):
+    db_type = payload.get("dbType")
+    host = payload.get("host")
+    port = payload.get("port")
+    username = payload.get("username")
+    password = payload.get("password")
+    database = payload.get("database")
+    auth_source = payload.get("authSource", "admin")
+
+    if not db_type or not host or not port or not database:
+        return JSONResponse(status_code=400, content={"success": False, "message": "dbType, host, port, and database are required"})
+
+    try:
+        if db_type == "postgresql":
+            tables = list_postgresql_tables(host, port, username, password, database)
+        elif db_type == "mysql":
+            tables = list_mysql_tables(host, port, username, password, database)
+        elif db_type == "mongodb":
+            tables = list_mongodb_collections(host, port, username, password, database, auth_source)
+        else:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Unsupported database type"})
+        return {"success": True, "tables": tables}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+@app.post("/api/table-data")
+async def get_table_data_post(payload: dict = Body(...)):
+    db_type = payload.get("dbType")
+    host = payload.get("host")
+    port = payload.get("port")
+    username = payload.get("username")
+    password = payload.get("password")
+    database = payload.get("database")
+    table = payload.get("table")
+    auth_source = payload.get("authSource", "admin")
+    page = payload.get("page", 1)
+    page_size = payload.get("pageSize", 100)
+
+    if not db_type or not host or not port or not database or not table:
+        return JSONResponse(status_code=400, content={"success": False, "message": "dbType, host, port, database, and table are required"})
+
+    try:
+        if db_type == "postgresql":
+            result = fetch_postgresql_table_data(host, port, username, password, database, table, page, page_size)
+        elif db_type == "mysql":
+            result = fetch_mysql_table_data(host, port, username, password, database, table, page, page_size)
+        elif db_type == "mongodb":
+            result = fetch_mongodb_collection_data(host, port, username, password, database, table, auth_source, page, page_size)
+        else:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Unsupported database type"})
+        return {"success": True, "data": result["data"], "totalRows": result["total_rows"], "page": page, "pageSize": page_size, "totalPages": (result["total_rows"] + page_size - 1) // page_size}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+@app.post("/api/delete-database")
+async def delete_database_post(payload: dict = Body(...)):
+    db_type = payload.get("dbType")
+    host = payload.get("host")
+    port = payload.get("port")
+    username = payload.get("username")
+    password = payload.get("password")
+    database = payload.get("database")
+    auth_source = payload.get("authSource", "admin")
+
+    if not db_type or not host or not port or not database:
+        return JSONResponse(status_code=400, content={"success": False, "message": "dbType, host, port, and database are required"})
+
+    try:
+        if db_type == "postgresql":
+            result = delete_postgresql_database(host, port, username, password, database)
+        elif db_type == "mysql":
+            result = delete_mysql_database(host, port, username, password, database)
+        elif db_type == "mongodb":
+            result = delete_mongodb_database(host, port, username, password, database, auth_source)
+        else:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Unsupported database type"})
+        return {"success": True, "message": f"{db_type} database {database} deleted successfully"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+@app.post("/api/create-connection")
+async def create_connection_post(payload: dict = Body(...)):
+    # This endpoint can reuse the test connection logic
+    return await test_connection(payload)
+
