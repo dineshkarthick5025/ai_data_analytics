@@ -440,7 +440,7 @@ def generate_sql_english(user_prompt, schema_description):
     prompt = f"""You are an expert SQL developer. Convert this question to a precise SQL query.
 Use the following table schema:
 {schema_description}
-Return ONLY the SQL query, nothing else.
+Return ONLY the SQL query, nothing else, this is very crucial, return only the query nothing else.
 Question: {user_prompt}"""
     
     # Call the RunPod API
