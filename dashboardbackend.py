@@ -190,9 +190,9 @@ async def login(request: Request, username: str = Form(...), password: str = For
         value=session_token,
         httponly=True,
         max_age=SESSION_EXPIRE_MINUTES * 60,
-        samesite="Lax",
+        samesite="None",
         path="/",  # Important: set cookie path to root
-        secure=False  # Set to True in production with HTTPS
+        secure=True  # Set to True in production with HTTPS
     )
     return response
 
