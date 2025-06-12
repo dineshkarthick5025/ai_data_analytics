@@ -1104,7 +1104,7 @@
           <button onclick="savePDF()" class="btn-success">
             <i class="fas fa-file-pdf"></i> Save canvas
           </button>
-          <button onclick="exportCanvasAsPDF()" class="btn-success" id="exportButton">
+          <button onclick="exportCanvasAsPDF()" class="btn-success">
             <i class="fas fa-file-pdf"></i> Export PDF
           </button>
         </div>
@@ -1840,12 +1840,20 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(savedElements));
       loadCanvasElements();
     }
-    async function savePDF() {
-      location.reload();
-      
+    let isCanvasSaved = false;
+
+    async function savePDF(){
+      isCanvasSaved = true;
+      alert("Canvas saved successfully.");
+      // Reload only the canvas elements without reloading the entire page
+      loadCanvasElements();
     }
     // Export as PDF
     async function exportCanvasAsPDF() {
+      if (!isCanvasSaved) {
+        alert("Please save the canvas before exporting.");
+        return;
+      }
       
   const dropZone = document.getElementById("dropZone");
   
