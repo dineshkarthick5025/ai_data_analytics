@@ -206,7 +206,7 @@ async def logout(request: Request):
             cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_token,))
             conn.commit()
     
-    response = RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
+    response = RedirectResponse("/", status_code=status.HTTP_302_FOUND)
     response.delete_cookie("session_token")
     return response
 
